@@ -199,6 +199,7 @@ public class FMLLoader
     {
         LOGGER.debug(SCAN,"Scanning for Mod Locators");
         modDiscoverer = new ModDiscoverer(arguments);
+        modDiscoverer.syncingMods();
         backgroundScanHandler = modDiscoverer.discoverMods();
         loadingModList = backgroundScanHandler.getLoadingModList();
         commonLaunchHandler.addLibraries(backgroundScanHandler.getModFiles().getOrDefault(IModFile.Type.LIBRARY, Collections.emptyList()));

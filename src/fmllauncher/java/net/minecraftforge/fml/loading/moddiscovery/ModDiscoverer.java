@@ -14,8 +14,11 @@ import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.fml.loading.LoadingModList;
 import net.minecraftforge.fml.loading.ModDirTransformerDiscoverer;
 import net.minecraftforge.fml.loading.ModSorter;
+import net.minecraftforge.fml.loading.moddiscovery.sync.FTPService;
 import net.minecraftforge.fml.loading.progress.StartupMessageManager;
 import net.minecraftforge.forgespi.Environment;
+import net.minecraftforge.forgespi.language.IModFileInfo;
+import net.minecraftforge.forgespi.language.IModInfo;
 import net.minecraftforge.forgespi.locating.IModFile;
 import net.minecraftforge.forgespi.locating.IModLocator;
 import org.apache.commons.lang3.tuple.Pair;
@@ -57,6 +60,8 @@ import static net.minecraftforge.fml.loading.LogMarkers.SCAN;
 
 
 public class ModDiscoverer {
+    private static final String EXCLUDED_FOLDER = "excluded";
+    private static final String DOWNLOAD_FOLDER = "downloads";
     private static final Path INVALID_PATH = Paths.get("This", "Path", "Should", "Never", "Exist", "Because", "That", "Would", "Be", "Stupid", "CON", "AUX", "/dev/null");
     private static final Logger LOGGER = LogManager.getLogger();
     private final ServiceLoader<IModLocator> locators;
@@ -84,6 +89,72 @@ public class ModDiscoverer {
         this.locatorList = locatorList;
         this.locatorClassLoader = null;
         this.locators = null;
+    }
+
+    public void syncingMods(){
+        LOGGER.debug(SCAN,"Sync for mods from lokitas server");
+        try {
+            ModsFolderLocator modsFolderLocator = locatorList.stream()
+                    .filter(ModsFolderLocator.class::isInstance)
+                    .map (ModsFolderLocator.class::cast)
+                    .findFirst()
+                    .get();
+            if(modsFolderLocator == null)
+                return;
+            Path excludeFolder = Paths.get(modsFolderLocator.folder().toString(),EXCLUDED_FOLDER);
+            Path downloadFolder = Paths.get(modsFolderLocator.folder().toString(),DOWNLOAD_FOLDER);
+            LOGGER.debug(SCAN,"Identifying mods from server.");
+            final List<String> remoteMods = FTPService.getInstance().listMods();
+            LOGGER.debug(SCAN,"{} mods identified.",remoteMods.size());
+            StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(remoteMods.size()+" mods required to run the client."));
+            for (String mod: remoteMods){
+                Path modPath = Paths.get(downloadFolder.toString(),mod);
+                if(!Files.exists(modPath)){
+                    if(!Files.exists(downloadFolder))
+                        Files.createDirectory(downloadFolder);
+                    StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Downloading mod file "+mod+"..."));
+                    FTPService.getInstance().downloadMod(mod,downloadFolder.toString());
+                }
+            }
+            LOGGER.debug(SCAN,"Validating mods");
+            final List<ModFile> localMods = modsFolderLocator
+                    .scanMods()
+                    .stream()
+                    .peek(mf -> LOGGER.debug(SCAN,"Found mod file {} of type {} with locator {}", mf.getFileName(), mf.getType(), mf.getLocator()))
+                    .peek(mf -> StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Found mod file "+mf.getFileName()+" of type "+mf.getType())))
+                    .map(ModFile.class::cast)
+                    .collect(Collectors.toList());
+            for (ModFile mod: localMods )
+            {
+                if(!remoteMods.contains(mod.getFileName())){
+                    Path source = mod.getFilePath();
+                    Path target = Paths.get(mod.getFilePath().getParent().toString(),EXCLUDED_FOLDER, mod.getFileName()).toAbsolutePath();
+                    if(!Files.exists(excludeFolder))
+                        Files.createDirectory(excludeFolder);
+                    Files.move(source,target);
+                    LOGGER.debug(SCAN,"Moving mod {} to '{}' because is not longer necessary",mod.getFileName(),excludeFolder);
+                    StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Moving mod "+mod.getFileName()+" to '"+EXCLUDED_FOLDER+"' because is not longer necessary"));
+                }
+            }
+            List<Path> downloadedMods = Files.list(downloadFolder)
+                    .collect(Collectors.toList());
+
+            for(Path modDownloaded : downloadedMods){
+                String name = modDownloaded.getFileName().toString();
+                Path mod = Paths.get(modsFolderLocator.folder().toString(),name);
+                if(!Files.exists(mod)){
+                    Files.copy(modDownloaded,mod);
+                    StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Moving mod "+name+" from '"+DOWNLOAD_FOLDER+"' to the main mod folder because is required"));
+                    LOGGER.debug(SCAN,"Moving mod {} from '{}' to the main mod folder because is required",name,DOWNLOAD_FOLDER);
+                }
+            }
+
+        }catch (IOException ex){
+
+            LOGGER.error(ex.getMessage());
+            LOGGER.error(ex.getStackTrace());
+        }
+        return;
     }
 
     public BackgroundScanHandler discoverMods() {
