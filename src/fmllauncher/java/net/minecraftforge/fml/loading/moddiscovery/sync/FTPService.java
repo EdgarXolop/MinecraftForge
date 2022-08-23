@@ -1,5 +1,6 @@
 package net.minecraftforge.fml.loading.moddiscovery.sync;
 
+import net.minecraftforge.fml.loading.FMLConfig;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
@@ -21,11 +22,11 @@ public class FTPService {
     private String _serverModPath;
 
     private FTPService (){
-        this._server = System.getenv("lkt-ftp-server");
-        this._user = System.getenv("lkt-ftp-user");
-        this._pass = System.getenv("lkt-ftp-pass");
-        this._port = System.getenv("lkt-ftp-port") == null ? 21 : Integer.parseInt(System.getenv("lkt-ftp-port"));
-        this._serverModPath = System.getenv("lkt-ftp-mod-path") == null ? "/mods" : System.getenv("lkt-ftp-mod-path");
+        this._server = FMLConfig.lktFtpServer();
+        this._user = FMLConfig.lktFtpUser();
+        this._pass = FMLConfig.lktFtpPass();
+        this._port = FMLConfig.lktFtpPort();
+        this._serverModPath = FMLConfig.lktFtpModPath();
     }
 
     public static FTPService getInstance(){
@@ -51,9 +52,14 @@ public class FTPService {
         ftpClient.disconnect();
     }
 
-    public List<String> listMods() throws IOException{
-        List<String> mods = new ArrayList<>();
+    private void validateCredentials() throws IOException{
+        if(_server == null || _user == null || _serverModPath == null)
+            throw new IOException("Invalid parameters check the fml.toml file");
+    }
 
+    public List<String> listMods() throws IOException{
+        validateCredentials();
+        List<String> mods = new ArrayList<>();
         this.connect();
 
         FTPFile[] files = ftpClient.listFiles(_serverModPath);
@@ -68,7 +74,8 @@ public class FTPService {
     }
 
 
-    public boolean downloadMod(String modName, String target){
+    public boolean downloadMod(String modName, String target) throws IOException{
+        validateCredentials();
         boolean success = false;
         try {
             this.connect();

@@ -29,6 +29,11 @@ public class FMLConfig
         configSpec.define("splashscreen", Boolean.TRUE);
         configSpec.define("maxThreads", -1);
         configSpec.define("versionCheck", Boolean.TRUE);
+        configSpec.define("lktFtpServer", "");
+        configSpec.define("lktFtpUser", "");
+        configSpec.define("lktFtpPass", "");
+        configSpec.define("lktFtpPort", 21);
+        configSpec.define("lktFtpModPath", "/mods");
         configSpec.define("defaultConfigPath",  "defaultconfigs");
     }
 
@@ -85,5 +90,22 @@ public class FMLConfig
 
     public static String defaultConfigPath() {
         return INSTANCE.configData.<String>getOptional("defaultConfigPath").orElse("defaultconfigs");
+    }
+
+    public static String lktFtpServer() {
+        return INSTANCE.configData.<String>getOptional("lktFtpServer").orElse(null);
+    }
+    public static String lktFtpUser() {
+        return INSTANCE.configData.<String>getOptional("lktFtpUser").orElse(null);
+    }
+
+    public static String lktFtpPass() {
+        return INSTANCE.configData.<String>getOptional("lktFtpPass").orElse(null);
+    }
+    public static int lktFtpPort() {
+        return INSTANCE.configData.<Integer>getOptional("lktFtpPort").orElse(21);
+    }
+    public static String lktFtpModPath() {
+        return INSTANCE.configData.<String>getOptional("lktFtpModPath").orElse("/mods");
     }
 }
