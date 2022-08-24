@@ -57,18 +57,22 @@ public class FTPService {
             throw new IOException("Invalid parameters check the fml.toml file");
     }
 
-    public List<String> listMods() throws IOException{
-        validateCredentials();
+    public List<String> listMods() {
         List<String> mods = new ArrayList<>();
-        this.connect();
+        try {
+            validateCredentials();
+            this.connect();
 
-        FTPFile[] files = ftpClient.listFiles(_serverModPath);
+            FTPFile[] files = ftpClient.listFiles(_serverModPath);
 
-        for(FTPFile file : files){
-            mods.add(file.getName());
+            for(FTPFile file : files){
+                mods.add(file.getName());
+            }
+
+            this.disconnect();
+        }catch (IOException ex){
+
         }
-
-        this.disconnect();
 
         return mods;
     }

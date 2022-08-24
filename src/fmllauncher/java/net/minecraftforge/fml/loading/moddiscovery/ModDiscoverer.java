@@ -96,87 +96,107 @@ public class ModDiscoverer {
 
     public void syncingMods(){
         LOGGER.debug(SCAN,"Sync for mods from lokitas server");
-        try {
-            ModsFolderLocator modsFolderLocator = locatorList.stream()
-                    .filter(ModsFolderLocator.class::isInstance)
-                    .map (ModsFolderLocator.class::cast)
-                    .findFirst()
-                    .get();
-            if(modsFolderLocator == null)
-                return;
-            Path excludeFolder = Paths.get(modsFolderLocator.folder().toString(),EXCLUDED_FOLDER);
-            Path downloadFolder = Paths.get(modsFolderLocator.folder().toString(),DOWNLOAD_FOLDER);
-            LOGGER.debug(SCAN,"Identifying mods from server.");
-            final List<String> remoteMods = FTPService.getInstance().listMods();
+        ModsFolderLocator modsFolderLocator = locatorList.stream()
+                .filter(ModsFolderLocator.class::isInstance)
+                .map (ModsFolderLocator.class::cast)
+                .findFirst()
+                .get();
+
+        if(modsFolderLocator == null)
+            return;
+
+        LOGGER.debug(SCAN,"Identifying mods from server.");
+        Path excludeFolder = Paths.get(modsFolderLocator.folder().toString(),EXCLUDED_FOLDER);
+        Path downloadFolder = Paths.get(modsFolderLocator.folder().toString(),DOWNLOAD_FOLDER);
+        final List<String> remoteMods = FTPService.getInstance().listMods();
+
+        if(remoteMods.size() == 0) {
+            LOGGER.debug(SCAN,"{} mods identified, sync process skipped",remoteMods.size());
+            return;
+        }
+        else
             LOGGER.debug(SCAN,"{} mods identified.",remoteMods.size());
-            StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(remoteMods.size()+" mods required to run the client."));
-            for (String mod: remoteMods){
-                Path modPath = Paths.get(downloadFolder.toString(),mod);
-                if(!Files.exists(modPath)){
+
+        StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(remoteMods.size()+" mods required to run the client."));
+        for (String mod: remoteMods){
+            Path modPath = Paths.get(downloadFolder.toString(),mod);
+
+            if(!Files.exists(modPath)){
+                try {
+
                     Boolean downloaded = false;
+
                     if(!Files.exists(downloadFolder))
                         Files.createDirectory(downloadFolder);
-                    try {
 
-                        StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Downloading mod file "+mod+"..."));
-                        CompletableFuture<Boolean> downloader = CompletableFuture.supplyAsync(() -> FTPService.getInstance().downloadMod(mod,downloadFolder.toString()));
-                        while (!downloader.isDone())
-                        {
-                            StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(mod+"::Status::Downloading..."));
-                            Thread.sleep(DOWNLOAD_STATUS_CHECK_MILLIS);
-                        }
-                        downloaded = downloader.get();
-                    }catch (InterruptedException | ExecutionException ex){
-                        downloaded = false;
-                    }finally {
-                        if(!downloaded && Files.exists(modPath))
-                            Files.delete(modPath);
+                    StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Downloading mod file "+mod+"..."));
 
-                        if(downloaded)
-                            StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(mod+"::Status::Download completed..."));
-                        else
-                            StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(mod+"::Status::Download failed..."));
-                    }
+                    if(!downloaded && Files.exists(modPath))
+                        Files.delete(modPath);
+
+                }catch (IOException ex){
+                    StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Error downloading mod file "+mod+"..."));
+                    LOGGER.error(SCAN,"Error downloading mod file {}...",mod);
+                    LOGGER.error(ex.getMessage());
+                    LOGGER.error(ex.getStackTrace());
                 }
             }
-            LOGGER.debug(SCAN,"Validating mods");
-            final List<ModFile> localMods = modsFolderLocator
-                    .scanMods()
-                    .stream()
-                    .peek(mf -> LOGGER.debug(SCAN,"Found mod file {} of type {} with locator {}", mf.getFileName(), mf.getType(), mf.getLocator()))
-                    .peek(mf -> StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Found mod file "+mf.getFileName()+" of type "+mf.getType())))
-                    .map(ModFile.class::cast)
-                    .collect(Collectors.toList());
-            for (ModFile mod: localMods )
-            {
-                if(!remoteMods.contains(mod.getFileName())){
-                    Path source = mod.getFilePath();
-                    Path target = Paths.get(mod.getFilePath().getParent().toString(),EXCLUDED_FOLDER, mod.getFileName()).toAbsolutePath();
+        }
+
+        LOGGER.debug(SCAN,"Validating mods");
+        final List<ModFile> localMods = modsFolderLocator
+                .scanMods()
+                .stream()
+                .peek(mf -> LOGGER.debug(SCAN,"Found mod file {} of type {} with locator {}", mf.getFileName(), mf.getType(), mf.getLocator()))
+                .peek(mf -> StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Found mod file "+mf.getFileName()+" of type "+mf.getType())))
+                .map(ModFile.class::cast)
+                .collect(Collectors.toList());
+
+        for (ModFile mod: localMods )
+        {
+            if(!remoteMods.contains(mod.getFileName())){
+                Path source = mod.getFilePath();
+                Path target = Paths.get(mod.getFilePath().getParent().toString(),EXCLUDED_FOLDER, mod.getFileName()).toAbsolutePath();
+                try{
                     if(!Files.exists(excludeFolder))
                         Files.createDirectory(excludeFolder);
                     Files.move(source,target);
                     LOGGER.debug(SCAN,"Moving mod {} to '{}' because is not longer necessary",mod.getFileName(),excludeFolder);
                     StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Moving mod "+mod.getFileName()+" to '"+EXCLUDED_FOLDER+"' because is not longer necessary"));
+                }catch (IOException ex){
+                    StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Error Moving mod "+mod.getFileName()+" to '"+EXCLUDED_FOLDER+"'"));
+                    LOGGER.error(SCAN,"Error moving mod {} to '{}'",mod.getFileName(),excludeFolder);
+                    LOGGER.error(ex.getMessage());
+                    LOGGER.error(ex.getStackTrace());
                 }
             }
-            List<Path> downloadedMods = Files.list(downloadFolder)
-                    .collect(Collectors.toList());
+        }
 
-            for(Path modDownloaded : downloadedMods){
-                String name = modDownloaded.getFileName().toString();
-                Path mod = Paths.get(modsFolderLocator.folder().toString(),name);
-                if(!Files.exists(mod)){
+        List<Path> downloadedMods = null;
+        try{
+            downloadedMods = Files.list(downloadFolder)
+                    .collect(Collectors.toList());
+        }catch (IOException ex){
+            downloadedMods= new ArrayList<>();
+        }
+
+        for(Path modDownloaded : downloadedMods){
+            String name = modDownloaded.getFileName().toString();
+            Path mod = Paths.get(modsFolderLocator.folder().toString(),name);
+            if(!Files.exists(mod)){
+                try{
                     Files.copy(modDownloaded,mod);
                     StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Moving mod "+name+" from '"+DOWNLOAD_FOLDER+"' to the main mod folder because is required"));
                     LOGGER.debug(SCAN,"Moving mod {} from '{}' to the main mod folder because is required",name,DOWNLOAD_FOLDER);
+                }catch (IOException ex){
+                    StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Error Moving mod "+name+" from '"+DOWNLOAD_FOLDER+"' to the main mod folder"));
+                    LOGGER.error(SCAN,"Error moving mod {} from '{}' to the main mod folder",name,DOWNLOAD_FOLDER);
+                    LOGGER.error(ex.getMessage());
+                    LOGGER.error(ex.getStackTrace());
                 }
             }
-
-        }catch (IOException ex){
-
-            LOGGER.error(ex.getMessage());
-            LOGGER.error(ex.getStackTrace());
         }
+
         return;
     }
 
