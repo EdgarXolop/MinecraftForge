@@ -74,10 +74,10 @@ public class FTPService {
     }
 
 
-    public boolean downloadMod(String modName, String target) throws IOException{
-        validateCredentials();
+    public boolean downloadMod(String modName, String target){
         boolean success = false;
         try {
+            this.validateCredentials();
             this.connect();
             ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
             String remoteFile = Paths.get(_serverModPath,modName).toString();

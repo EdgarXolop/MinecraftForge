@@ -47,6 +47,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -60,10 +62,11 @@ import static net.minecraftforge.fml.loading.LogMarkers.SCAN;
 
 
 public class ModDiscoverer {
-    private static final String EXCLUDED_FOLDER = "excluded";
-    private static final String DOWNLOAD_FOLDER = "downloads";
     private static final Path INVALID_PATH = Paths.get("This", "Path", "Should", "Never", "Exist", "Because", "That", "Would", "Be", "Stupid", "CON", "AUX", "/dev/null");
     private static final Logger LOGGER = LogManager.getLogger();
+    private static final long DOWNLOAD_STATUS_CHECK_MILLIS = 3000;
+    private static final String EXCLUDED_FOLDER = "excluded";
+    private static final String DOWNLOAD_FOLDER = "downloads";
     private final ServiceLoader<IModLocator> locators;
     private final List<IModLocator> locatorList;
     private final LocatorClassLoader locatorClassLoader;
@@ -112,8 +115,25 @@ public class ModDiscoverer {
                 if(!Files.exists(modPath)){
                     if(!Files.exists(downloadFolder))
                         Files.createDirectory(downloadFolder);
-                    StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Downloading mod file "+mod+"..."));
-                    FTPService.getInstance().downloadMod(mod,downloadFolder.toString());
+                    try {
+
+                        StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Downloading mod file "+mod+"..."));
+                        CompletableFuture<Boolean> downloader = CompletableFuture.supplyAsync(() -> FTPService.getInstance().downloadMod(mod,downloadFolder.toString()));
+                        while (!downloader.isDone())
+                        {
+                            StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(mod+"::Status::Downloading..."));
+                            Thread.sleep(DOWNLOAD_STATUS_CHECK_MILLIS);
+                        }
+                        Boolean downloaded = downloader.get();
+
+                        if(downloaded)
+                            StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(mod+"::Status::Download completed..."));
+                        else
+                            StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(mod+"::Status::Download failed..."));
+
+                    }catch (InterruptedException | ExecutionException ex){
+                        StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(mod+"::Status::Download failed..."));
+                    }
                 }
             }
             LOGGER.debug(SCAN,"Validating mods");

@@ -167,6 +167,7 @@ public class FMLLoader
         launchHandlerName = launchHandler.get().name();
         gamePath = environment.getProperty(IEnvironment.Keys.GAMEDIR.get()).orElse(Paths.get(".").toAbsolutePath());
 
+
         commonLaunchHandler = (FMLCommonLaunchHandler)launchHandler.get();
         naming = commonLaunchHandler.getNaming();
         dist = commonLaunchHandler.getDist();
