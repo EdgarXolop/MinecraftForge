@@ -37,6 +37,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.CodeSigner;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -65,9 +66,9 @@ import static net.minecraftforge.fml.loading.LogMarkers.SCAN;
 public class ModDiscoverer {
     private static final Path INVALID_PATH = Paths.get("This", "Path", "Should", "Never", "Exist", "Because", "That", "Would", "Be", "Stupid", "CON", "AUX", "/dev/null");
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final long DOWNLOAD_STATUS_CHECK_MILLIS = 1000;
-    private static final String EXCLUDED_FOLDER = "excluded";
-    private static final String DOWNLOAD_FOLDER = "downloads";
+    private final long DOWNLOAD_STATUS_CHECK_MILLIS = 1000;
+    private final String EXCLUDED_FOLDER = "excluded";
+    private final String DOWNLOAD_FOLDER = "downloads";
     private final ServiceLoader<IModLocator> locators;
     private final List<IModLocator> locatorList;
     private final LocatorClassLoader locatorClassLoader;
@@ -133,7 +134,7 @@ public class ModDiscoverer {
                     dThread.start();
 
                     while(dThread.isAlive()){
-                        StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(LocalDateTime.now().getSecond() +"||Downloading mod file "+mod));
+                        StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_TIME) +"||Downloading mod file "+mod));
                         Thread.sleep(DOWNLOAD_STATUS_CHECK_MILLIS);
                     }
 
