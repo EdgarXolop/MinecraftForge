@@ -36,6 +36,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.CodeSigner;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -64,7 +65,7 @@ import static net.minecraftforge.fml.loading.LogMarkers.SCAN;
 public class ModDiscoverer {
     private static final Path INVALID_PATH = Paths.get("This", "Path", "Should", "Never", "Exist", "Because", "That", "Would", "Be", "Stupid", "CON", "AUX", "/dev/null");
     private static final Logger LOGGER = LogManager.getLogger();
-    private static final long DOWNLOAD_STATUS_CHECK_MILLIS = 3000;
+    private static final long DOWNLOAD_STATUS_CHECK_MILLIS = 1000;
     private static final String EXCLUDED_FOLDER = "excluded";
     private static final String DOWNLOAD_FOLDER = "downloads";
     private final ServiceLoader<IModLocator> locators;
@@ -122,19 +123,21 @@ public class ModDiscoverer {
             Path modPath = Paths.get(downloadFolder.toString(),mod);
 
             if(!Files.exists(modPath)){
+                Thread dThread = null;
                 try {
-
-                    Boolean downloaded = false;
-
+                    Integer step = 0;
                     if(!Files.exists(downloadFolder))
                         Files.createDirectory(downloadFolder);
 
-                    StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Downloading mod file "+mod+"..."));
+                    dThread = new Thread(()->{FTPService.getInstance().downloadMod(mod,downloadFolder.toString());});
+                    dThread.start();
 
-                    if(!downloaded && Files.exists(modPath))
-                        Files.delete(modPath);
+                    while(dThread.isAlive()){
+                        StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(LocalDateTime.now().getSecond() +"||Downloading mod file "+mod));
+                        Thread.sleep(DOWNLOAD_STATUS_CHECK_MILLIS);
+                    }
 
-                }catch (IOException ex){
+                }catch (IOException | InterruptedException ex){
                     StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Error downloading mod file "+mod+"..."));
                     LOGGER.error(SCAN,"Error downloading mod file {}...",mod);
                     LOGGER.error(ex.getMessage());
