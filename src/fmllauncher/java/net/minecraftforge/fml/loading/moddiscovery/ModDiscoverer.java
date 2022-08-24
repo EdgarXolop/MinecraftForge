@@ -113,6 +113,7 @@ public class ModDiscoverer {
             for (String mod: remoteMods){
                 Path modPath = Paths.get(downloadFolder.toString(),mod);
                 if(!Files.exists(modPath)){
+                    Boolean downloaded = false;
                     if(!Files.exists(downloadFolder))
                         Files.createDirectory(downloadFolder);
                     try {
@@ -124,15 +125,19 @@ public class ModDiscoverer {
                             StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(mod+"::Status::Downloading..."));
                             Thread.sleep(DOWNLOAD_STATUS_CHECK_MILLIS);
                         }
-                        Boolean downloaded = downloader.get();
+                        downloaded = downloader.get();
 
-                        if(downloaded)
-                            StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(mod+"::Status::Download completed..."));
-                        else
-                            StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(mod+"::Status::Download failed..."));
+                        if(Files.exists(modPath))
+                            Files.delete(modPath);
 
                     }catch (InterruptedException | ExecutionException ex){
-                        StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(mod+"::Status::Download failed..."));
+                        downloaded = false;
+                    }finally {
+                        if(downloaded)
+                            StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(mod+"::Status::Download completed..."));
+                        else{
+                            StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(mod+"::Status::Download failed..."));
+                        }
                     }
                 }
             }
