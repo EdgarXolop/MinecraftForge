@@ -135,9 +135,8 @@ public class ModDiscoverer {
                     }finally {
                         if(downloaded)
                             StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(mod+"::Status::Download completed..."));
-                        else{
+                        else
                             StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(mod+"::Status::Download failed..."));
-                        }
                     }
                 }
             }
