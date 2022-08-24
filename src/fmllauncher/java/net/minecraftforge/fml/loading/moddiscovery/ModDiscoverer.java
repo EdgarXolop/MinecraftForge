@@ -126,13 +126,12 @@ public class ModDiscoverer {
                             Thread.sleep(DOWNLOAD_STATUS_CHECK_MILLIS);
                         }
                         downloaded = downloader.get();
-
-                        if(Files.exists(modPath))
-                            Files.delete(modPath);
-
                     }catch (InterruptedException | ExecutionException ex){
                         downloaded = false;
                     }finally {
+                        if(!downloaded && Files.exists(modPath))
+                            Files.delete(modPath);
+
                         if(downloaded)
                             StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(mod+"::Status::Download completed..."));
                         else
