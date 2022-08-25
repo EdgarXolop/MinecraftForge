@@ -1,0 +1,14 @@
+# Enable forge global version checking
+versionCheck = true
+# does the splashscreen run
+splashscreen = true
+# max threads for parallel loading : -1 uses Runtime#availableProcessors
+maxThreads = -1
+# Config credentials to load the remote mods
+defaultConfigPath = "defaultconfigs"
+
+lktFtpServer = ""
+lktFtpUser = ""
+lktFtpPass = ""
+lktFtpPort = 21
+lktFtpModPath = "/mods"

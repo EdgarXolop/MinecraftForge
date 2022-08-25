@@ -20,7 +20,7 @@ public enum FMLPaths
     GAMEDIR(),
     MODSDIR("mods"),
     CONFIGDIR("config"),
-    FMLCONFIG(false, CONFIGDIR, "fml.toml");
+    FMLCONFIG(false, CONFIGDIR, "fml-lokitas.toml");
 
     private static final Logger LOGGER = LogManager.getLogger();
     private final Path relativePath;

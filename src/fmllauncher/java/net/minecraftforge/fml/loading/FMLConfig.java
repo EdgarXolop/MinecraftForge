@@ -42,7 +42,7 @@ public class FMLConfig
     private void loadFrom(final Path configFile)
     {
         configData = CommentedFileConfig.builder(configFile).sync().
-                defaultResource("/META-INF/defaultfmlconfig.toml").
+                defaultResource("/META-INF/defaultfmlconfig-lokitas.toml").
                 autosave().autoreload().
                 writingMode(WritingMode.REPLACE).
                 build();
