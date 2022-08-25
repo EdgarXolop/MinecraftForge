@@ -4,6 +4,8 @@ import net.minecraftforge.fml.loading.FMLConfig;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.*;
 import java.net.SocketException;
@@ -12,7 +14,11 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+import static net.minecraftforge.fml.loading.LogMarkers.SCAN;
+
 public class FTPService {
+
+    private static final Logger LOGGER = LogManager.getLogger();
     private static FTPService Instance;
     FTPClient ftpClient;
     private String _server;
@@ -84,12 +90,20 @@ public class FTPService {
             this.validateCredentials();
             this.connect();
             ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
-            String remoteFile = Paths.get(_serverModPath,modName).toString();
+            String remoteFile = Paths.get(_serverModPath,modName).toString().replace("\\","/");
             String localFile = Paths.get(target,modName).toString();
 
-            OutputStream outputStream1 = new BufferedOutputStream(new FileOutputStream(localFile));
-            success = ftpClient.retrieveFile(remoteFile, outputStream1);
-            outputStream1.close();
+            OutputStream os = new BufferedOutputStream(new FileOutputStream(localFile));
+            success = ftpClient.retrieveFile(remoteFile, os);
+
+            os.flush();
+            os.close();
+
+            if(!success){
+                String reply = ftpClient.getReplyString();
+                LOGGER.error(SCAN,"Error downloading mod file {}...",remoteFile);
+                LOGGER.error(SCAN,reply);
+            }
 
             this.disconnect();
 
