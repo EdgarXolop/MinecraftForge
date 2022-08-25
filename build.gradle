@@ -578,7 +578,7 @@ project(':forge') {
                 "If you MUST automate this, please consider supporting the project through https://www.patreon.com/LexManos/"
             ]
             def idx = project.version.indexOf('-')
-            id = project.version.substring(0, idx) + "-${project.name}" + project.version.substring(idx)
+            id = project.version.substring(0, idx) + "-lokitasland" + project.version.substring(idx)
         }
         inputs.file vanilla
         outputs.file output
