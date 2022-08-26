@@ -33,7 +33,8 @@ public class FMLConfig
         configSpec.define("lktFtpUser", "");
         configSpec.define("lktFtpPass", "");
         configSpec.define("lktFtpPort", 21);
-        configSpec.define("lktFtpModPath", "/mods");
+        configSpec.define("lktFtpServerModPath", "/mods");
+        configSpec.define("lktFtpClientModPath", "/mods/client");
         configSpec.define("defaultConfigPath",  "defaultconfigs");
     }
 
@@ -105,7 +106,10 @@ public class FMLConfig
     public static int lktFtpPort() {
         return INSTANCE.configData.<Integer>getOptional("lktFtpPort").orElse(21);
     }
-    public static String lktFtpModPath() {
-        return INSTANCE.configData.<String>getOptional("lktFtpModPath").orElse("/mods");
+    public static String lktFtpServerModPath() {
+        return INSTANCE.configData.<String>getOptional("lktFtpServerModPath").orElse("/mods");
+    }
+    public static String lktFtpClientModPath() {
+        return INSTANCE.configData.<String>getOptional("lktFtpClientModPath").orElse("/mods/client");
     }
 }

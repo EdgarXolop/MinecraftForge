@@ -26,13 +26,15 @@ public class FTPService {
     private String _pass;
     private int _port;
     private String _serverModPath;
+    private String _clientModPath;
 
     private FTPService (){
         this._server = FMLConfig.lktFtpServer();
         this._user = FMLConfig.lktFtpUser();
         this._pass = FMLConfig.lktFtpPass();
         this._port = FMLConfig.lktFtpPort();
-        this._serverModPath = FMLConfig.lktFtpModPath();
+        this._serverModPath = FMLConfig.lktFtpServerModPath();
+        this._clientModPath = FMLConfig.lktFtpClientModPath();
     }
 
     public static FTPService getInstance(){
@@ -63,16 +65,23 @@ public class FTPService {
             throw new IOException("Invalid parameters check the fml.toml file");
     }
 
-    public List<String> listMods() {
-        List<String> mods = new ArrayList<>();
+    public List<Path> listMods() {
+        List<Path> mods = new ArrayList<>();
         try {
             validateCredentials();
             this.connect();
 
-            FTPFile[] files = ftpClient.listFiles(_serverModPath);
+            FTPFile[] fServer = ftpClient.listFiles(_serverModPath);
+            FTPFile[] fClient = ftpClient.listFiles(_clientModPath);
 
-            for(FTPFile file : files){
-                mods.add(file.getName());
+            for(FTPFile file : fServer){
+                if(file.isFile())
+                    mods.add(Paths.get(_serverModPath,file.getName()));
+            }
+
+            for(FTPFile file : fClient){
+                if(file.isFile())
+                    mods.add(Paths.get(_clientModPath,file.getName()));
             }
 
             this.disconnect();
@@ -84,14 +93,14 @@ public class FTPService {
     }
 
 
-    public boolean downloadMod(String modName, String target){
+    public boolean downloadMod(Path modPath, String target){
         boolean success = false;
         try {
             this.validateCredentials();
             this.connect();
             ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
-            String remoteFile = Paths.get(_serverModPath,modName).toString().replace("\\","/");
-            String localFile = Paths.get(target,modName).toString();
+            String remoteFile = modPath.toString().replace("\\","/");
+            String localFile = Paths.get(target,modPath.getFileName().toString()).toString();
 
             OutputStream os = new BufferedOutputStream(new FileOutputStream(localFile));
             success = ftpClient.retrieveFile(remoteFile, os);

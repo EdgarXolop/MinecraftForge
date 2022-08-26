@@ -110,7 +110,7 @@ public class ModDiscoverer {
         LOGGER.debug(SCAN,"Identifying mods from server.");
         Path excludeFolder = Paths.get(modsFolderLocator.folder().toString(),EXCLUDED_FOLDER);
         Path downloadFolder = Paths.get(modsFolderLocator.folder().toString(),DOWNLOAD_FOLDER);
-        final List<String> remoteMods = FTPService.getInstance().listMods();
+        final List<Path> remoteMods = FTPService.getInstance().listMods();
 
         if(remoteMods.size() == 0) {
             LOGGER.debug(SCAN,"{} mods identified, sync process skipped",remoteMods.size());
@@ -120,8 +120,8 @@ public class ModDiscoverer {
             LOGGER.debug(SCAN,"{} mods identified.",remoteMods.size());
 
         StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(remoteMods.size()+" mods required to run the client."));
-        for (String mod: remoteMods){
-            Path modPath = Paths.get(downloadFolder.toString(),mod);
+        for (Path remotePath: remoteMods){
+            Path modPath = Paths.get(downloadFolder.toString(), remotePath.getFileName().toString());
 
             if(!Files.exists(modPath)){
                 Thread dThread = null;
@@ -130,17 +130,17 @@ public class ModDiscoverer {
                     if(!Files.exists(downloadFolder))
                         Files.createDirectory(downloadFolder);
 
-                    dThread = new Thread(()->{FTPService.getInstance().downloadMod(mod,downloadFolder.toString());});
+                    dThread = new Thread(()->{FTPService.getInstance().downloadMod(remotePath,downloadFolder.toString());});
                     dThread.start();
 
                     while(dThread.isAlive()){
-                        StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_TIME) +"||Downloading mod file "+mod));
+                        StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_TIME) +"||Downloading mod file "+modPath.getFileName().toString()));
                         Thread.sleep(DOWNLOAD_STATUS_CHECK_MILLIS);
                     }
 
                 }catch (IOException | InterruptedException ex){
-                    StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Error downloading mod file "+mod+"..."));
-                    LOGGER.error(SCAN,"Error downloading mod file {}...",mod);
+                    StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Error downloading mod file "+ modPath.getFileName().toString()+"..."));
+                    LOGGER.error(SCAN,"Error downloading mod file {}...",modPath.getFileName().toString());
                     LOGGER.error(ex.getMessage());
                     LOGGER.error(ex.getStackTrace());
                 }

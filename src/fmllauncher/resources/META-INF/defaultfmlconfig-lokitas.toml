@@ -11,4 +11,5 @@ lktFtpServer = ""
 lktFtpUser = ""
 lktFtpPass = ""
 lktFtpPort = 21
-lktFtpModPath = "/mods"
+lktFtpClientModPath = "/mods/client"
+lktFtpServerModPath = "/mods"
