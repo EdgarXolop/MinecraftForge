@@ -181,6 +181,8 @@ public class ModDiscoverer {
             downloadedMods = Files.list(downloadFolder)
                     .collect(Collectors.toList());
         }catch (IOException ex){
+            LOGGER.error(SCAN,"Error moving getting the local mods");
+            LOGGER.error(SCAN, ex.getMessage());
             downloadedMods= new ArrayList<>();
         }
 

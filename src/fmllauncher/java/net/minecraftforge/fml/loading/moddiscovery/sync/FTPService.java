@@ -86,6 +86,8 @@ public class FTPService {
 
             this.disconnect();
         }catch (IOException ex){
+            LOGGER.error(SCAN,"Error listing remote mods");
+            LOGGER.error(SCAN, ex.getMessage());
 
         }
 
@@ -117,6 +119,8 @@ public class FTPService {
             this.disconnect();
 
         }catch (IOException ex){
+            LOGGER.error(SCAN,"Error downloading mod");
+            LOGGER.error(SCAN, ex.getMessage());
             success = false;
         }
 
