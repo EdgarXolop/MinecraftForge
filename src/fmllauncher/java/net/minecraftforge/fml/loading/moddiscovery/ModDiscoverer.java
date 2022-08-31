@@ -17,8 +17,6 @@ import net.minecraftforge.fml.loading.ModSorter;
 import net.minecraftforge.fml.loading.moddiscovery.sync.FTPService;
 import net.minecraftforge.fml.loading.progress.StartupMessageManager;
 import net.minecraftforge.forgespi.Environment;
-import net.minecraftforge.forgespi.language.IModFileInfo;
-import net.minecraftforge.forgespi.language.IModInfo;
 import net.minecraftforge.forgespi.locating.IModFile;
 import net.minecraftforge.forgespi.locating.IModLocator;
 import org.apache.commons.lang3.tuple.Pair;
@@ -49,8 +47,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -111,6 +107,11 @@ public class ModDiscoverer {
         Path excludeFolder = Paths.get(modsFolderLocator.folder().toString(),EXCLUDED_FOLDER);
         Path downloadFolder = Paths.get(modsFolderLocator.folder().toString(),DOWNLOAD_FOLDER);
         final List<Path> remoteMods = FTPService.getInstance().listMods();
+        final List<String> remoteModNames = FTPService.getInstance().listMods()
+                .stream()
+                .map(Path::getFileName)
+                .map(String.class::cast)
+                .collect(Collectors.toList());
 
         if(remoteMods.size() == 0) {
             LOGGER.debug(SCAN,"{} mods identified, sync process skipped",remoteMods.size());
@@ -158,7 +159,7 @@ public class ModDiscoverer {
 
         for (ModFile mod: localMods )
         {
-            if(!remoteMods.contains(mod.getFileName())){
+            if(!remoteModNames.contains(mod.getFileName())){
                 Path source = mod.getFilePath();
                 Path target = Paths.get(mod.getFilePath().getParent().toString(),EXCLUDED_FOLDER, mod.getFileName()).toAbsolutePath();
                 try{
