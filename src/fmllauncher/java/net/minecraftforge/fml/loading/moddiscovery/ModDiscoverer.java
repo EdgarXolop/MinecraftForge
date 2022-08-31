@@ -107,10 +107,10 @@ public class ModDiscoverer {
         Path excludeFolder = Paths.get(modsFolderLocator.folder().toString(),EXCLUDED_FOLDER);
         Path downloadFolder = Paths.get(modsFolderLocator.folder().toString(),DOWNLOAD_FOLDER);
         final List<Path> remoteMods = FTPService.getInstance().listMods();
-        final List<String> remoteModNames = FTPService.getInstance().listMods()
+        final List<String> remoteModNames = remoteMods
                 .stream()
                 .map(Path::getFileName)
-                .map(String.class::cast)
+                .map(Path::toString)
                 .collect(Collectors.toList());
 
         if(remoteMods.size() == 0) {
