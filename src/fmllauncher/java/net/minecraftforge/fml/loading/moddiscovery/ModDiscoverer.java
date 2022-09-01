@@ -190,7 +190,7 @@ public class ModDiscoverer {
         for(Path modDownloaded : downloadedMods){
             String name = modDownloaded.getFileName().toString();
             Path mod = Paths.get(modsFolderLocator.folder().toString(),name);
-            if(!Files.exists(mod)){
+            if(remoteModNames.contains(name) && !Files.exists(mod)){
                 try{
                     Files.copy(modDownloaded,mod);
                     StartupMessageManager.modLoaderConsumer().ifPresent(c->c.accept("Moving mod "+name+" from '"+DOWNLOAD_FOLDER+"' to the main mod folder because is required"));
